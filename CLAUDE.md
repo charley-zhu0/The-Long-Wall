@@ -52,19 +52,46 @@ This is an npm workspaces monorepo with `client/` and `server/` packages.
 The server is the authoritative state owner. All block/player mutations go through Colyseus `MapSchema` which auto-broadcasts deltas to clients.
 
 ### Client (`client/src/`)
-- **`main.tsx` / `App.tsx`** — Entry point. Route `/teacher` renders `TeacherHUD`; all other routes show `TutorialModal` then `VoxelScene`.
-- **`network/client.ts`** — Colyseus.js singleton. `VITE_SERVER_URL` env var overrides server URL (default `ws://localhost:2567`). Three join functions: `joinLobby()`, `joinGroup(groupId)`, `joinGroupAsTeacher()`.
-- **`store/blockStore.ts`** — Zustand store for local block state. Block types: `1=灰砖` (grey brick), `2=垛口` (merlon), `3=烽火台` (beacon tower). Maintains undo history.
+
+**Routing**: No React Router. `App.tsx` checks `window.location.pathname === '/teacher'` to render `TeacherHUD`; all other paths go through the student flow.
+
+**Student App phase state machine** (`App.tsx`):
+```
+character → group → waiting → tutorial → game
+```
+- `character`: `CharacterCreator` collects username + avatarId, joins lobby, sends `SET_PROFILE`
+- `group`: `GroupSelector` sends `SELECT_GROUP`; server replies `GROUP_CONFIRMED {groupId, roomId|null}`
+- `waiting`: shows spinner, listens for `GAME_STARTED` on lobbyRoom
+- `tutorial`: `TutorialModal` overlay on top of already-mounted `VoxelScene` (input disabled)
+- `game`: `VoxelScene` with `inputEnabled=true`
+
+**Key files**:
+- **`network/client.ts`** — Colyseus.js singleton. `VITE_SERVER_URL` overrides server URL (default `ws://localhost:2567`). `joinGroupAsTeacher()` loops groups 1–3 and joins all three rooms simultaneously.
+- **`store/blockStore.ts`** — Zustand store for local block state. Block types: `1=灰砖`, `2=垛口`, `3=烽火台`. Key format `"x,y,z"` (matches server). `setBlocks()` replaces entire state and resets undo history; called on `onStateChange`.
 - **`store/playerStore.ts`** — Zustand store for remote player positions and local `groupId`.
-- **`components/VoxelScene.tsx`** — Main 3D canvas: React Three Fiber `<Canvas>` with `BlockGrid`, `InputController`, `HUD`, OrbitControls (middle=orbit, right=pan).
+- **`utils/blockGeometries.ts`** — Custom `BufferGeometry` builders: `makeMerlonGeometry()` (U-shaped merlon from 3 merged boxes), `makeTowerGeometry()` (2-tier stepped tower). Used by `BlockGrid` for non-standard block shapes.
+- **`components/VoxelScene.tsx`** — Main 3D canvas: React Three Fiber `<Canvas>` with `BlockGrid`, `InputController`, `HUD`, OrbitControls (middle=orbit, right=pan, left=reserved for raycasting).
 - **`components/BlockGrid.tsx`** — Renders blocks as Three.js `InstancedMesh` (one per block type for performance).
 - **`components/InputController.tsx`** — Raycasting for block placement/destruction. PC: left click = place, right click = destroy. Touch: tap = place, long-press 500ms = destroy.
 - **`components/BlueprintOverlay.tsx`** — Semi-transparent blueprint ghost showing target block positions.
 - **`components/TeacherHUD.tsx`** — Teacher god-view: fly camera, highlight/encourage controls per group.
-- **`components/TutorialModal.tsx`** — Tutorial shown before gameplay begins.
+- **`components/TutorialModal.tsx`** — Multi-step tutorial shown before gameplay begins.
 - **`i18n/`** — `zh-CN.json` and `en.json` translation files.
 
 ### Key WebSocket Messages
+
+**Lobby room** (`lobby`):
+| Message | Direction | Description |
+|---|---|---|
+| `SET_PROFILE` | client→server | `{username,avatarId}` — sent after joining lobby |
+| `SELECT_GROUP` | client→server | `{groupId}` — player picks group 1–3 |
+| `GROUP_CONFIRMED` | server→client | `{groupId, roomId\|null, username, avatarId}` |
+| `GROUP_FULL` | server→client | `{groupId}` — group has 4 players already |
+| `LOBBY_STATE` | server→broadcast | `{groupCounts:{1,2,3}}` |
+| `START_GAME` | client→server | Teacher triggers; creates 3 GroupRooms |
+| `GAME_STARTED` | server→broadcast | `{groupRoomIds:{1:id,2:id,3:id}}` |
+
+**Group room** (`group`):
 | Message | Direction | Description |
 |---|---|---|
 | `PLACE_BLOCK` | client→server | `{x,y,z,blockType}` |
@@ -74,7 +101,6 @@ The server is the authoritative state owner. All block/player mutations go throu
 | `TEACHER_ENCOURAGE` | client→server→broadcast | `{groupId,message:'star'|'heart'|'thumbsup'}` |
 | `SECTION_COMPLETE` | server→broadcast | `{groupId}` |
 | `UNSTABLE_WARNING` | server→broadcast | `{positions:[{x,y,z}]}` |
-| `GROUP_ASSIGNED` | server→client | `{groupId}` |
 
 ### Grid Bounds
 Server enforces `x,z ∈ [-32, 32]`, `y ∈ [0, 32]`. Blocks outside bounds are silently rejected.

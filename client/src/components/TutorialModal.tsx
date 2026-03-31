@@ -24,6 +24,11 @@ export default function TutorialModal({ onStart }: Props) {
       icon: '🔨',
     },
     {
+      title: '如何控制视角',
+      desc: '鼠标中键拖拽旋转视角，鼠标右键拖拽平移视角，滚轮缩放。\n触屏设备：单指拖拽旋转视角。',
+      icon: '🎥',
+    },
+    {
       title: '和小伙伴一起建造！',
       desc: '蓝色虚影提示你需要放置砖块的位置，完成后会有庆祝！',
       icon: '🎉',
@@ -52,7 +57,7 @@ export default function TutorialModal({ onStart }: Props) {
       }}>
         <div style={{ fontSize: 80, marginBottom: 16 }}>{current.icon}</div>
         <h2 style={{ fontSize: 28, marginBottom: 12, color: '#2c3e50' }}>{current.title}</h2>
-        <p style={{ fontSize: 20, color: '#555', marginBottom: 32, lineHeight: 1.5 }}>{current.desc}</p>
+        <p style={{ fontSize: 20, color: '#555', marginBottom: 32, lineHeight: 1.5, whiteSpace: 'pre-line' }}>{current.desc}</p>
 
         <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
           {step < steps.length - 1 ? (
