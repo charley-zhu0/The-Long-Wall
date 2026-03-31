@@ -1,12 +1,9 @@
 import { useRef, useMemo, useEffect } from 'react'
-import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { useBlockStore } from '../store/blockStore'
 import { makeMerlonGeometry, makeTowerGeometry } from '../utils/blockGeometries'
 
 const MAX_INSTANCES = 10000
 
-// Generate a canvas-based 64x64 pixel-art brick texture
 function makeBrickTexture(color: string, accent: string): THREE.Texture {
   const size = 64
   const canvas = document.createElement('canvas')
@@ -15,17 +12,13 @@ function makeBrickTexture(color: string, accent: string): THREE.Texture {
   const ctx = canvas.getContext('2d')!
   ctx.fillStyle = color
   ctx.fillRect(0, 0, size, size)
-  // mortar lines
   ctx.strokeStyle = accent
   ctx.lineWidth = 2
-  // horizontal
   ctx.beginPath(); ctx.moveTo(0, 16); ctx.lineTo(size, 16); ctx.stroke()
   ctx.beginPath(); ctx.moveTo(0, 32); ctx.lineTo(size, 32); ctx.stroke()
   ctx.beginPath(); ctx.moveTo(0, 48); ctx.lineTo(size, 48); ctx.stroke()
-  // vertical - row 1 & 3 (offset 0)
   ctx.beginPath(); ctx.moveTo(32, 0); ctx.lineTo(32, 16); ctx.stroke()
   ctx.beginPath(); ctx.moveTo(32, 32); ctx.lineTo(32, 48); ctx.stroke()
-  // vertical - row 2 & 4 (offset 16)
   ctx.beginPath(); ctx.moveTo(16, 16); ctx.lineTo(16, 32); ctx.stroke()
   ctx.beginPath(); ctx.moveTo(48, 16); ctx.lineTo(48, 32); ctx.stroke()
   ctx.beginPath(); ctx.moveTo(16, 48); ctx.lineTo(16, 64); ctx.stroke()
@@ -37,14 +30,16 @@ function makeBrickTexture(color: string, accent: string): THREE.Texture {
 }
 
 const BLOCK_COLORS: Record<number, [string, string]> = {
-  1: ['#a8a8a8', '#6e6e6e'], // 灰砖
-  2: ['#c0b090', '#7a6840'], // 垛口
-  3: ['#8b6060', '#5a3030'], // 烽火台
+  1: ['#a8a8a8', '#6e6e6e'],
+  2: ['#c0b090', '#7a6840'],
+  3: ['#8b6060', '#5a3030'],
 }
 
-export default function BlockGrid() {
-  const blocks = useBlockStore((s) => s.blocks)
+interface Props {
+  blocks: Map<string, { type: number }>
+}
 
+export default function TeacherBlockGrid({ blocks }: Props) {
   const refs = useRef<Record<number, THREE.InstancedMesh | null>>({})
   const dummy = useMemo(() => new THREE.Object3D(), [])
 
@@ -73,7 +68,6 @@ export default function BlockGrid() {
     }
   }, [geometries])
 
-  // Group blocks by type
   const byType = useMemo(() => {
     const groups: Record<number, Array<[number, number, number]>> = { 1: [], 2: [], 3: [] }
     for (const [key, entry] of blocks) {

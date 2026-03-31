@@ -8,7 +8,7 @@ const GROUP_COLORS: Record<number, string> = { 1: '#FFD93D', 2: '#6BCB77', 3: '#
 
 interface Props {
   lobbyRoom: Room
-  onDone: (groupId: number) => void
+  onDone: (groupId: number, roomId: string | null) => void
 }
 
 export default function GroupSelector({ lobbyRoom, onDone }: Props) {
@@ -29,7 +29,7 @@ export default function GroupSelector({ lobbyRoom, onDone }: Props) {
 
     const confirmedHandler = (data: { groupId: number; roomId: string | null }) => {
       setLocalGroupId(data.groupId)
-      onDone(data.groupId)
+      onDone(data.groupId, data.roomId)
     }
 
     const fullHandler = (data: { groupId: number }) => {

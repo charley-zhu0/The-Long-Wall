@@ -1,22 +1,84 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { PointerLockControls, Sky } from '@react-three/drei'
-import BlockGrid from './BlockGrid'
+import { OrbitControls, Sky } from '@react-three/drei'
+import { Room } from 'colyseus.js'
+import { joinLobby, joinGroupById } from '../network/client'
+import TeacherBlockGrid from './TeacherBlockGrid'
 
 export default function TeacherHUD() {
   const [selectedGroup, setSelectedGroup] = useState<1 | 2 | 3>(1)
-  const [encourageMessage, setEncourageMessage] = useState<string | null>(null)
+  const [groupBlocks, setGroupBlocks] = useState<Record<number, Map<string, { type: number }>>>({
+    1: new Map(),
+    2: new Map(),
+    3: new Map(),
+  })
+  const [gameStarted, setGameStarted] = useState(false)
+  const [starting, setStarting] = useState(false)
+  const lobbyRoom = useRef<Room | null>(null)
+  const rooms = useRef<Room[]>([])
 
-  const sendHighlight = (groupId: number) => {
-    // In real integration: send TEACHER_HIGHLIGHT to server via network room
-    console.log('Highlight group', groupId)
+  useEffect(() => {
+    let cancelled = false
+    joinLobby({ isTeacher: true }).then((lobby) => {
+      if (cancelled) return
+      lobbyRoom.current = lobby
+
+      lobby.onMessage('GAME_STARTED', async (data: { groupRoomIds: Record<string, string> }) => {
+        if (cancelled) return
+        setGameStarted(true)
+        setStarting(false)
+
+        // Join all 3 group rooms as observer
+        const joined: Room[] = []
+        for (const [groupIdStr, roomId] of Object.entries(data.groupRoomIds)) {
+          const groupId = Number(groupIdStr)
+          try {
+            const room = await joinGroupById(roomId)
+            joined.push(room)
+            const syncBlocks = (state: any) => {
+              const entries = new Map<string, { type: number }>()
+              state.blocks.forEach((block: any, key: string) => {
+                entries.set(key, { type: block.blockType })
+              })
+              setGroupBlocks((prev) => ({ ...prev, [groupId]: entries }))
+            }
+            syncBlocks(room.state)
+            room.onStateChange(syncBlocks)
+          } catch (err) {
+            console.error(`Teacher failed to join group ${groupId}`, err)
+          }
+        }
+        rooms.current = joined
+      })
+    }).catch((err) => console.error('Teacher joinLobby failed', err))
+
+    return () => {
+      cancelled = true
+      lobbyRoom.current?.leave()
+      lobbyRoom.current = null
+      rooms.current.forEach((r) => r.leave())
+      rooms.current = []
+    }
+  }, [])
+
+  const handleStartGame = () => {
+    if (!lobbyRoom.current || starting || gameStarted) return
+    setStarting(true)
+    lobbyRoom.current.send('START_GAME', {})
   }
 
   const sendEncourage = (msg: 'star' | 'heart' | 'thumbsup') => {
-    setEncourageMessage(msg)
-    // In real integration: send TEACHER_ENCOURAGE to server
-    console.log('Encourage group', selectedGroup, msg)
-    setTimeout(() => setEncourageMessage(null), 2000)
+    const room = rooms.current[selectedGroup - 1]
+    if (room) {
+      room.send('TEACHER_ENCOURAGE', { groupId: selectedGroup, message: msg })
+    }
+  }
+
+  const sendHighlight = (groupId: number) => {
+    const room = rooms.current[groupId - 1]
+    if (room) {
+      room.send('TEACHER_HIGHLIGHT', { groupId })
+    }
   }
 
   return (
@@ -35,6 +97,26 @@ export default function TeacherHUD() {
         overflowY: 'auto',
       }}>
         <h2 style={{ fontSize: 20, marginBottom: 16, color: '#f1c40f' }}>教师控制台</h2>
+
+        {/* Start game button */}
+        <button
+          onClick={handleStartGame}
+          disabled={starting || gameStarted}
+          style={{
+            width: '100%',
+            padding: '14px 0',
+            marginBottom: 20,
+            borderRadius: 8,
+            border: 'none',
+            background: gameStarted ? '#555' : starting ? '#888' : '#e67e22',
+            color: '#fff',
+            fontSize: 17,
+            fontWeight: 'bold',
+            cursor: gameStarted || starting ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {gameStarted ? '游戏已开始' : starting ? '正在启动…' : '▶ 开始游戏'}
+        </button>
 
         {/* Group selector */}
         <div style={{ marginBottom: 16 }}>
@@ -65,16 +147,17 @@ export default function TeacherHUD() {
         {/* Highlight button */}
         <button
           onClick={() => sendHighlight(selectedGroup)}
+          disabled={!gameStarted}
           style={{
             width: '100%',
             padding: '12px 0',
             marginBottom: 12,
             borderRadius: 8,
             border: 'none',
-            background: '#e74c3c',
+            background: gameStarted ? '#e74c3c' : '#555',
             color: '#fff',
             fontSize: 16,
-            cursor: 'pointer',
+            cursor: gameStarted ? 'pointer' : 'not-allowed',
             fontWeight: 'bold',
           }}
         >
@@ -88,16 +171,17 @@ export default function TeacherHUD() {
             <button
               key={msg}
               onClick={() => sendEncourage(msg)}
+              disabled={!gameStarted}
               style={{
                 flex: 1,
                 minWidth: 70,
                 padding: '12px 0',
                 borderRadius: 8,
                 border: 'none',
-                background: '#27ae60',
+                background: gameStarted ? '#27ae60' : '#555',
                 color: '#fff',
                 fontSize: 28,
-                cursor: 'pointer',
+                cursor: gameStarted ? 'pointer' : 'not-allowed',
               }}
             >
               {msg === 'star' ? '⭐' : msg === 'heart' ? '❤️' : '👍'}
@@ -105,7 +189,7 @@ export default function TeacherHUD() {
           ))}
         </div>
 
-        {/* Minimap placeholder */}
+        {/* Minimap */}
         <div style={{ marginTop: 24 }}>
           <p style={{ fontSize: 14, marginBottom: 8, color: '#aaa' }}>小组概览</p>
           {([1, 2, 3] as const).map((g) => (
@@ -126,7 +210,7 @@ export default function TeacherHUD() {
                 fontSize: 13,
               }}
             >
-              第{g}组工作区
+              第{g}组 · {groupBlocks[g]?.size ?? 0} 块
             </div>
           ))}
         </div>
@@ -144,9 +228,10 @@ export default function TeacherHUD() {
           <planeGeometry args={[200, 200]} />
           <meshLambertMaterial color="#5a8a3a" />
         </mesh>
-        <BlockGrid />
-        <PointerLockControls />
+        <TeacherBlockGrid blocks={groupBlocks[selectedGroup] ?? new Map()} />
+        <OrbitControls />
       </Canvas>
     </div>
   )
 }
+

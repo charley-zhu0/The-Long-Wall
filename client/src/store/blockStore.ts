@@ -12,6 +12,7 @@ interface BlockStoreState {
   history: Array<{ key: string; prev: BlockEntry | null }>
   placeBlock: (x: number, y: number, z: number, type: BlockType) => void
   destroyBlock: (x: number, y: number, z: number) => void
+  setBlocks: (entries: Map<string, { type: BlockType }>) => void
   undo: () => void
   setSelectedType: (type: BlockType) => void
 }
@@ -46,6 +47,15 @@ export const useBlockStore = create<BlockStoreState>((set) => ({
         blocks,
         history: [...state.history, { key, prev }],
       }
+    }),
+
+  setBlocks: (entries) =>
+    set(() => {
+      const blocks = new Map<string, BlockEntry>()
+      for (const [key, val] of entries) {
+        blocks.set(key, { type: val.type })
+      }
+      return { blocks, history: [] }
     }),
 
   undo: () =>

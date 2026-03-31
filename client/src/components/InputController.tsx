@@ -2,12 +2,13 @@ import { useRef, useCallback, useEffect } from 'react'
 import { useThree } from '@react-three/fiber'
 import { useGesture } from '@use-gesture/react'
 import * as THREE from 'three'
+import { Room } from 'colyseus.js'
 import { useBlockStore } from '../store/blockStore'
 
 const raycaster = new THREE.Raycaster()
 const mouse = new THREE.Vector2()
 
-export default function InputController() {
+export default function InputController({ groupRoom }: { groupRoom: Room | null }) {
   const { camera, gl, scene } = useThree()
   const placeBlock = useBlockStore((s) => s.placeBlock)
   const destroyBlock = useBlockStore((s) => s.destroyBlock)
@@ -44,9 +45,13 @@ export default function InputController() {
       const normal = hit.face?.normal ?? new THREE.Vector3(0, 1, 0)
       const worldNormal = normal.clone().transformDirection(hit.object.matrixWorld)
       const placePos = hit.point.clone().add(worldNormal.multiplyScalar(0.5))
-      placeBlock(Math.round(placePos.x), Math.round(placePos.y), Math.round(placePos.z), selectedType)
+      const x = Math.round(placePos.x)
+      const y = Math.round(placePos.y)
+      const z = Math.round(placePos.z)
+      placeBlock(x, y, z, selectedType)
+      groupRoom?.send('PLACE_BLOCK', { x, y, z, blockType: selectedType })
     },
-    [getIntersection, placeBlock, selectedType],
+    [getIntersection, placeBlock, selectedType, groupRoom],
   )
 
   const handleDestroy = useCallback(
@@ -60,9 +65,13 @@ export default function InputController() {
       const matrix = new THREE.Matrix4()
       ;(hit.object as THREE.InstancedMesh).getMatrixAt(instanceId, matrix)
       const pos = new THREE.Vector3().setFromMatrixPosition(matrix)
-      destroyBlock(Math.round(pos.x), Math.round(pos.y), Math.round(pos.z))
+      const x = Math.round(pos.x)
+      const y = Math.round(pos.y)
+      const z = Math.round(pos.z)
+      destroyBlock(x, y, z)
+      groupRoom?.send('DESTROY_BLOCK', { x, y, z })
     },
-    [getIntersection, destroyBlock],
+    [getIntersection, destroyBlock, groupRoom],
   )
 
   // Mouse handler

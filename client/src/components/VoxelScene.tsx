@@ -1,12 +1,14 @@
 import React from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Sky } from '@react-three/drei'
+import { Room } from 'colyseus.js'
 import BlockGrid from './BlockGrid'
 import InputController from './InputController'
 import HUD from './HUD'
 import SunGlow from './SunGlow'
 import MountainRange from './MountainRange'
 import ForestDecoration from './ForestDecoration'
+import EncourageOverlay from './EncourageOverlay'
 
 function Ground() {
   return (
@@ -27,10 +29,21 @@ function GridHelper() {
   return <gridHelper args={[200, 200, '#444', '#333']} position={[0, -0.49, 0]} />
 }
 
-export default function VoxelScene({ inputEnabled = true }: { inputEnabled?: boolean }) {
+export default function VoxelScene({
+  inputEnabled = true,
+  groupRoom,
+  encourageMessage,
+  onEncourageDone,
+}: {
+  inputEnabled?: boolean
+  groupRoom?: Room | null
+  encourageMessage?: 'star' | 'heart' | 'thumbsup' | null
+  onEncourageDone?: () => void
+}) {
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
       <HUD />
+      <EncourageOverlay message={encourageMessage ?? null} onDone={onEncourageDone ?? (() => {})} />
       <Canvas
         shadows
         camera={{ position: [0, 10, 18], fov: 60 }}
@@ -51,7 +64,7 @@ export default function VoxelScene({ inputEnabled = true }: { inputEnabled?: boo
         <Ground />
         <GridHelper />
         <BlockGrid />
-        {inputEnabled && <InputController />}
+        {inputEnabled && <InputController groupRoom={groupRoom ?? null} />}
         <OrbitControls
           mouseButtons={{
             LEFT: undefined as any, // left click is handled by InputController

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 
 const EMOJIS: Record<string, string> = {
   star: '⭐',
@@ -7,38 +7,44 @@ const EMOJIS: Record<string, string> = {
 }
 
 interface Props {
-  message?: string | null
+  message: 'star' | 'heart' | 'thumbsup' | null
+  onDone: () => void
 }
 
-export function EncourageOverlay({ message }: Props) {
+export default function EncourageOverlay({ message, onDone }: Props) {
   const [visible, setVisible] = useState(false)
-  const [emoji, setEmoji] = useState('')
 
   useEffect(() => {
     if (!message) return
-    setEmoji(EMOJIS[message] ?? '🎉')
     setVisible(true)
-    const timer = setTimeout(() => setVisible(false), 2000)
+    const timer = setTimeout(() => {
+      setVisible(false)
+      onDone()
+    }, 2000)
     return () => clearTimeout(timer)
-  }, [message])
+  }, [message]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!visible) return null
+  if (!message || !visible) return null
 
   return (
     <div style={{
-      position: 'fixed',
+      position: 'absolute',
       inset: 0,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       pointerEvents: 'none',
-      zIndex: 100,
-      animation: 'pop 0.3s ease-out',
+      zIndex: 50,
+      animation: 'encourageFadeOut 2s ease-out forwards',
     }}>
-      <span style={{ fontSize: 120, filter: 'drop-shadow(0 0 20px rgba(255,200,0,0.8))' }}>
-        {emoji}
-      </span>
-      <style>{`@keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }`}</style>
+      <style>{`
+        @keyframes encourageFadeOut {
+          0%   { opacity: 1; transform: scale(1); }
+          70%  { opacity: 1; transform: scale(1.2); }
+          100% { opacity: 0; transform: scale(1.4); }
+        }
+      `}</style>
+      <span style={{ fontSize: 120, lineHeight: 1 }}>{EMOJIS[message] ?? '🎉'}</span>
     </div>
   )
 }
