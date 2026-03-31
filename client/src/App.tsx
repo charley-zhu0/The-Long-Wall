@@ -8,6 +8,7 @@ import GroupSelector from './components/GroupSelector'
 import { joinGroupById } from './network/client'
 import { useBlockStore } from './store/blockStore'
 import type { BlockType } from './store/blockStore'
+import { isTouchDevice } from './utils/deviceDetect'
 
 type AppPhase = 'character' | 'group' | 'waiting' | 'tutorial' | 'game'
 
@@ -15,6 +16,7 @@ const isTeacher = window.location.pathname === '/teacher'
 
 export default function App() {
   const [phase, setPhase] = useState<AppPhase>('character')
+  const [isTouch] = useState(() => isTouchDevice())
   const [lobbyRoom, setLobbyRoom] = useState<Room | null>(null)
   const [groupRoom, setGroupRoom] = useState<Room | null>(null)
   const [encourageMessage, setEncourageMessage] = useState<'star' | 'heart' | 'thumbsup' | null>(null)
@@ -124,12 +126,13 @@ export default function App() {
 
   return (
     <>
-      {phase === 'tutorial' && <TutorialModal onStart={() => setPhase('game')} />}
+      {phase === 'tutorial' && <TutorialModal isTouch={isTouch} onStart={() => setPhase('game')} />}
       <VoxelScene
         inputEnabled={phase === 'game'}
         groupRoom={groupRoom}
         encourageMessage={encourageMessage}
         onEncourageDone={() => setEncourageMessage(null)}
+        isTouch={isTouch}
       />
     </>
   )

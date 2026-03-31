@@ -1,6 +1,7 @@
 import React from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Sky } from '@react-three/drei'
+import * as THREE from 'three'
 import { Room } from 'colyseus.js'
 import BlockGrid from './BlockGrid'
 import InputController from './InputController'
@@ -34,15 +35,17 @@ export default function VoxelScene({
   groupRoom,
   encourageMessage,
   onEncourageDone,
+  isTouch = false,
 }: {
   inputEnabled?: boolean
   groupRoom?: Room | null
   encourageMessage?: 'star' | 'heart' | 'thumbsup' | null
   onEncourageDone?: () => void
+  isTouch?: boolean
 }) {
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
-      <HUD />
+      <HUD isTouch={isTouch} />
       <EncourageOverlay message={encourageMessage ?? null} onDone={onEncourageDone ?? (() => {})} />
       <Canvas
         shadows
@@ -64,17 +67,27 @@ export default function VoxelScene({
         <Ground />
         <GridHelper />
         <BlockGrid />
-        {inputEnabled && <InputController groupRoom={groupRoom ?? null} />}
-        <OrbitControls
-          mouseButtons={{
-            LEFT: undefined as any, // left click is handled by InputController
-            MIDDLE: 1,              // orbit with middle mouse
-            RIGHT: 2,               // pan with right (but right is also destroy – handled first)
-          }}
-          enablePan
-          enableZoom
-          maxPolarAngle={Math.PI / 2 - 0.05}
-        />
+        {inputEnabled && <InputController groupRoom={groupRoom ?? null} isTouch={isTouch} />}
+        {isTouch ? (
+          <OrbitControls
+            mouseButtons={{ LEFT: undefined as any, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN }}
+            touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN }}
+            enablePan
+            enableZoom
+            maxPolarAngle={Math.PI / 2 - 0.05}
+          />
+        ) : (
+          <OrbitControls
+            mouseButtons={{
+              LEFT: undefined as any,
+              MIDDLE: 1,
+              RIGHT: 2,
+            }}
+            enablePan
+            enableZoom
+            maxPolarAngle={Math.PI / 2 - 0.05}
+          />
+        )}
       </Canvas>
     </div>
   )

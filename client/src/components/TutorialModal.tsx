@@ -2,12 +2,13 @@ import React, { useState } from 'react'
 
 interface Props {
   onStart: () => void
+  isTouch?: boolean
 }
 
-export default function TutorialModal({ onStart }: Props) {
+export default function TutorialModal({ onStart, isTouch = false }: Props) {
   const [step, setStep] = useState(0)
 
-  const steps = [
+  const pcSteps = [
     {
       title: '欢迎来到长城建造！',
       desc: '我们要一起修复古老的长城！',
@@ -25,7 +26,7 @@ export default function TutorialModal({ onStart }: Props) {
     },
     {
       title: '如何控制视角',
-      desc: '鼠标中键拖拽旋转视角，鼠标右键拖拽平移视角，滚轮缩放。\n触屏设备：单指拖拽旋转视角。',
+      desc: '鼠标中键拖拽旋转视角，鼠标右键拖拽平移视角，滚轮缩放。',
       icon: '🎥',
     },
     {
@@ -34,6 +35,36 @@ export default function TutorialModal({ onStart }: Props) {
       icon: '🎉',
     },
   ]
+
+  const touchSteps = [
+    {
+      title: '欢迎来到长城建造！',
+      desc: '我们要一起修复古老的长城！',
+      icon: '🏯',
+    },
+    {
+      title: '如何放置砖块',
+      desc: '点击屏幕上的蓝色虚影位置，即可放置砖块。底部选择砖块类型后再点击放置。',
+      icon: '👆',
+    },
+    {
+      title: '如何拆除砖块',
+      desc: '点击屏幕底部的「拆除」按钮切换到拆除模式，再点击已有砖块即可拆除。',
+      icon: '🔨',
+    },
+    {
+      title: '如何控制视角',
+      desc: '用双指拖拽旋转和平移视角，双指捏合缩放。',
+      icon: '✌️',
+    },
+    {
+      title: '和小伙伴一起建造！',
+      desc: '蓝色虚影提示你需要放置砖块的位置，完成后会有庆祝！',
+      icon: '🎉',
+    },
+  ]
+
+  const steps = isTouch ? touchSteps : pcSteps
 
   const current = steps[step]
 

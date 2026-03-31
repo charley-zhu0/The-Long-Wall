@@ -10,11 +10,13 @@ interface BlockStoreState {
   blocks: Map<string, BlockEntry>
   selectedType: BlockType
   history: Array<{ key: string; prev: BlockEntry | null }>
+  touchMode: 'place' | 'erase'
   placeBlock: (x: number, y: number, z: number, type: BlockType) => void
   destroyBlock: (x: number, y: number, z: number) => void
   setBlocks: (entries: Map<string, { type: BlockType }>) => void
   undo: () => void
   setSelectedType: (type: BlockType) => void
+  setTouchMode: (mode: 'place' | 'erase') => void
 }
 
 export const encodeKey = (x: number, y: number, z: number) => `${x},${y},${z}`
@@ -23,6 +25,7 @@ export const useBlockStore = create<BlockStoreState>((set) => ({
   blocks: new Map(),
   selectedType: 1,
   history: [],
+  touchMode: 'place',
 
   placeBlock: (x, y, z, type) =>
     set((state) => {
@@ -73,4 +76,5 @@ export const useBlockStore = create<BlockStoreState>((set) => ({
     }),
 
   setSelectedType: (type) => set({ selectedType: type }),
+  setTouchMode: (mode) => set({ touchMode: mode }),
 }))

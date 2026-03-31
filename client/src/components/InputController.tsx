@@ -1,6 +1,5 @@
 import { useRef, useCallback, useEffect } from 'react'
 import { useThree } from '@react-three/fiber'
-import { useGesture } from '@use-gesture/react'
 import * as THREE from 'three'
 import { Room } from 'colyseus.js'
 import { useBlockStore } from '../store/blockStore'
@@ -8,13 +7,18 @@ import { useBlockStore } from '../store/blockStore'
 const raycaster = new THREE.Raycaster()
 const mouse = new THREE.Vector2()
 
-export default function InputController({ groupRoom }: { groupRoom: Room | null }) {
+export default function InputController({
+  groupRoom,
+  isTouch,
+}: {
+  groupRoom: Room | null
+  isTouch: boolean
+}) {
   const { camera, gl, scene } = useThree()
   const placeBlock = useBlockStore((s) => s.placeBlock)
   const destroyBlock = useBlockStore((s) => s.destroyBlock)
   const selectedType = useBlockStore((s) => s.selectedType)
-
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const touchMode = useBlockStore((s) => s.touchMode)
 
   const getIntersection = useCallback(
     (clientX: number, clientY: number) => {
@@ -74,7 +78,7 @@ export default function InputController({ groupRoom }: { groupRoom: Room | null 
     [getIntersection, destroyBlock, groupRoom],
   )
 
-  // Mouse handler
+  // PC mouse handler
   const handleMouseDown = useCallback(
     (e: MouseEvent) => {
       if (e.button === 2) {
@@ -86,36 +90,60 @@ export default function InputController({ groupRoom }: { groupRoom: Room | null 
     [handlePlace, handleDestroy],
   )
 
+  // Touch tap handler refs
+  const tapStartX = useRef(0)
+  const tapStartY = useRef(0)
+  const tapPointerId = useRef<number | null>(null)
+  const tapStartTime = useRef(0)
+  // Keep latest touchMode in a ref so the event handler always sees the current value
+  const touchModeRef = useRef(touchMode)
+  useEffect(() => { touchModeRef.current = touchMode }, [touchMode])
+
+  const handlePointerDown = useCallback((e: PointerEvent) => {
+    tapStartX.current = e.clientX
+    tapStartY.current = e.clientY
+    tapPointerId.current = e.pointerId
+    tapStartTime.current = Date.now()
+  }, [])
+
+  const handlePointerUp = useCallback(
+    (e: PointerEvent) => {
+      if (e.pointerId !== tapPointerId.current) return
+      const dx = e.clientX - tapStartX.current
+      const dy = e.clientY - tapStartY.current
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      const elapsed = Date.now() - tapStartTime.current
+      if (dist < 8 && elapsed < 300) {
+        // Single-finger tap
+        if (touchModeRef.current === 'place') {
+          handlePlace(e.clientX, e.clientY)
+        } else {
+          handleDestroy(e.clientX, e.clientY)
+        }
+      }
+    },
+    [handlePlace, handleDestroy],
+  )
+
   useEffect(() => {
     const el = gl.domElement
-    el.addEventListener('mousedown', handleMouseDown)
-    return () => el.removeEventListener('mousedown', handleMouseDown)
-  }, [gl.domElement, handleMouseDown])
-
-  // Touch: tap = place, long-press (500ms) = destroy
-  useGesture(
-    {
-      onPointerDown: ({ event }) => {
-        if (!(event instanceof TouchEvent)) return
-        const touch = (event as TouchEvent).touches[0]
-        longPressTimer.current = setTimeout(() => {
-          handleDestroy(touch.clientX, touch.clientY)
-        }, 500)
-      },
-      onPointerUp: ({ event }) => {
-        if (longPressTimer.current) {
-          clearTimeout(longPressTimer.current)
-          longPressTimer.current = null
-        }
-      },
-      onClick: ({ event }) => {
-        if (event instanceof MouseEvent) return // handled above
-        const touch = (event as any)
-        handlePlace(touch.clientX ?? 0, touch.clientY ?? 0)
-      },
-    },
-    { target: gl.domElement },
-  )
+    if (isTouch) {
+      el.addEventListener('pointerdown', handlePointerDown)
+      el.addEventListener('pointerup', handlePointerUp)
+      return () => {
+        el.removeEventListener('pointerdown', handlePointerDown)
+        el.removeEventListener('pointerup', handlePointerUp)
+      }
+    } else {
+      el.addEventListener('mousedown', handleMouseDown)
+      const preventContext = (e: Event) => e.preventDefault()
+      el.addEventListener('contextmenu', preventContext)
+      return () => {
+        el.removeEventListener('mousedown', handleMouseDown)
+        el.removeEventListener('contextmenu', preventContext)
+      }
+    }
+  }, [gl.domElement, isTouch, handleMouseDown, handlePointerDown, handlePointerUp])
 
   return null
 }
