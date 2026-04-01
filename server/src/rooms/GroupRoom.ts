@@ -14,8 +14,9 @@ export class GroupRoom extends Room<GroupRoomState> {
   maxClients = 5 // 4 students + 1 teacher observer
   private groupId: number = 1
   private targetBlocks: Set<string> = new Set()
+  private fixedBlocks: Set<string> = new Set()
 
-  onCreate(options: { groupId?: number; blueprint?: Array<{ x: number; y: number; z: number; type: number }> }) {
+  onCreate(options: { groupId?: number; blueprint?: Array<{ x: number; y: number; z: number; type: number; fixed?: boolean }> }) {
     this.groupId = options.groupId ?? 1
     this.setState(new GroupRoomState())
 
@@ -78,30 +79,44 @@ export class GroupRoom extends Room<GroupRoomState> {
     )
   }
 
-  private loadBlueprint(blocks: Array<{ x: number; y: number; z: number; type: number }>) {
-    // Store full target
+  private loadBlueprint(blocks: Array<{ x: number; y: number; z: number; type: number; fixed?: boolean }>) {
+    const repairBlocks: typeof blocks = []
+
     for (const b of blocks) {
-      this.targetBlocks.add(`${b.x},${b.y},${b.z}`)
-    }
-    // Pre-fill 70% of blocks (remove random 30%)
-    const indices = blocks.map((_, i) => i)
-    const toRemove = new Set(
-      indices.sort(() => Math.random() - 0.5).slice(0, Math.floor(blocks.length * 0.3))
-    )
-    for (let i = 0; i < blocks.length; i++) {
-      if (!toRemove.has(i)) {
-        const b = blocks[i]
-        const key = `${b.x},${b.y},${b.z}`
+      const key = `${b.x},${b.y},${b.z}`
+      this.targetBlocks.add(key)
+      if (b.fixed) {
+        // Fixed section: place directly, never removed
+        this.fixedBlocks.add(key)
         const block = new BlockState()
         block.blockType = b.type
         this.state.blocks.set(key, block)
+      } else {
+        repairBlocks.push(b)
+      }
+    }
+
+    // Repair section: randomly keep 70% (remove 30%)
+    const indices = repairBlocks.map((_, i) => i)
+    const toRemove = new Set(
+      indices.sort(() => Math.random() - 0.5).slice(0, Math.floor(repairBlocks.length * 0.3))
+    )
+    for (let i = 0; i < repairBlocks.length; i++) {
+      if (!toRemove.has(i)) {
+        const b = repairBlocks[i]
+        const block = new BlockState()
+        block.blockType = b.type
+        this.state.blocks.set(`${b.x},${b.y},${b.z}`, block)
       }
     }
   }
 
   private checkCompletion() {
     if (this.targetBlocks.size === 0) return
-    for (const key of this.targetBlocks) {
+    // Only check repair section (non-fixed blocks)
+    const repairTargets = [...this.targetBlocks].filter(k => !this.fixedBlocks.has(k))
+    if (repairTargets.length === 0) return
+    for (const key of repairTargets) {
       if (!this.state.blocks.has(key)) return
     }
     this.broadcast('SECTION_COMPLETE', { groupId: this.groupId })

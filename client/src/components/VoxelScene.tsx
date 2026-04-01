@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Sky } from '@react-three/drei'
 import * as THREE from 'three'
@@ -10,6 +10,7 @@ import SunGlow from './SunGlow'
 import MountainRange from './MountainRange'
 import ForestDecoration from './ForestDecoration'
 import EncourageOverlay from './EncourageOverlay'
+import CompletionModal from './CompletionModal'
 
 function Ground() {
   return (
@@ -43,13 +44,21 @@ export default function VoxelScene({
   onEncourageDone?: () => void
   isTouch?: boolean
 }) {
+  const [showCompletion, setShowCompletion] = useState(false)
+
+  useEffect(() => {
+    if (!groupRoom) return
+    groupRoom.onMessage('SECTION_COMPLETE', () => setShowCompletion(true))
+  }, [groupRoom])
+
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
       <HUD isTouch={isTouch} />
       <EncourageOverlay message={encourageMessage ?? null} onDone={onEncourageDone ?? (() => {})} />
+      {showCompletion && <CompletionModal onClose={() => setShowCompletion(false)} />}
       <Canvas
         shadows
-        camera={{ position: [0, 10, 18], fov: 60 }}
+        camera={{ position: [30, 14, 24], fov: 60 }}
         style={{ background: '#87ceeb' }}
         onContextMenu={(e) => e.preventDefault()}
       >

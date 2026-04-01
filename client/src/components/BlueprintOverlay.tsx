@@ -1,11 +1,43 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import * as THREE from 'three'
+import { useFrame } from '@react-three/fiber'
 import { useBlockStore } from '../store/blockStore'
 import { makeMerlonGeometry, makeTowerGeometry } from '../utils/blockGeometries'
 
 interface Props {
   targetBlocks: Map<string, number> // key -> blockType
   highlightedPositions?: Set<string>
+}
+
+function BreathingGhost({
+  position,
+  geometry,
+  isHighlighted,
+}: {
+  position: [number, number, number]
+  geometry: THREE.BufferGeometry
+  isHighlighted: boolean
+}) {
+  const matRef = useRef<THREE.MeshBasicMaterial>(null)
+
+  useFrame(({ clock }) => {
+    if (matRef.current && !isHighlighted) {
+      matRef.current.opacity = 0.3 + 0.2 * Math.sin(clock.elapsedTime * 2.5)
+    }
+  })
+
+  return (
+    <mesh position={position} raycast={() => null}>
+      <primitive object={geometry} />
+      <meshBasicMaterial
+        ref={matRef}
+        color={isHighlighted ? '#ff4444' : '#ffcc44'}
+        transparent
+        opacity={isHighlighted ? 0.6 : 0.4}
+        wireframe={false}
+      />
+    </mesh>
+  )
 }
 
 export default function BlueprintOverlay({ targetBlocks, highlightedPositions }: Props) {
@@ -34,18 +66,15 @@ export default function BlueprintOverlay({ targetBlocks, highlightedPositions }:
     <>
       {missingPositions.map(([x, y, z, blockType]) => {
         const key = `${x},${y},${z}`
-        const isHighlighted = highlightedPositions?.has(key)
+        const isHighlighted = highlightedPositions?.has(key) ?? false
         const geomType = (blockType === 2 || blockType === 3) ? blockType : 1
         return (
-          <mesh key={key} position={[x, y, z]}>
-            <primitive object={ghostGeometries[geomType]} />
-            <meshBasicMaterial
-              color={isHighlighted ? '#ff4444' : '#88aaff'}
-              transparent
-              opacity={isHighlighted ? 0.6 : 0.25}
-              wireframe={!isHighlighted}
-            />
-          </mesh>
+          <BreathingGhost
+            key={key}
+            position={[x, y, z]}
+            geometry={ghostGeometries[geomType]}
+            isHighlighted={isHighlighted}
+          />
         )
       })}
     </>

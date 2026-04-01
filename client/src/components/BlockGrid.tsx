@@ -1,45 +1,19 @@
 import { useRef, useMemo, useEffect } from 'react'
-import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useBlockStore } from '../store/blockStore'
 import { makeMerlonGeometry, makeTowerGeometry } from '../utils/blockGeometries'
 
 const MAX_INSTANCES = 10000
 
-// Generate a canvas-based 64x64 pixel-art brick texture
-function makeBrickTexture(color: string, accent: string): THREE.Texture {
-  const size = 64
-  const canvas = document.createElement('canvas')
-  canvas.width = size
-  canvas.height = size
-  const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = color
-  ctx.fillRect(0, 0, size, size)
-  // mortar lines
-  ctx.strokeStyle = accent
-  ctx.lineWidth = 2
-  // horizontal
-  ctx.beginPath(); ctx.moveTo(0, 16); ctx.lineTo(size, 16); ctx.stroke()
-  ctx.beginPath(); ctx.moveTo(0, 32); ctx.lineTo(size, 32); ctx.stroke()
-  ctx.beginPath(); ctx.moveTo(0, 48); ctx.lineTo(size, 48); ctx.stroke()
-  // vertical - row 1 & 3 (offset 0)
-  ctx.beginPath(); ctx.moveTo(32, 0); ctx.lineTo(32, 16); ctx.stroke()
-  ctx.beginPath(); ctx.moveTo(32, 32); ctx.lineTo(32, 48); ctx.stroke()
-  // vertical - row 2 & 4 (offset 16)
-  ctx.beginPath(); ctx.moveTo(16, 16); ctx.lineTo(16, 32); ctx.stroke()
-  ctx.beginPath(); ctx.moveTo(48, 16); ctx.lineTo(48, 32); ctx.stroke()
-  ctx.beginPath(); ctx.moveTo(16, 48); ctx.lineTo(16, 64); ctx.stroke()
-  ctx.beginPath(); ctx.moveTo(48, 48); ctx.lineTo(48, 64); ctx.stroke()
-  const tex = new THREE.CanvasTexture(canvas)
+const loader = new THREE.TextureLoader()
+
+function loadPixelTexture(url: string): THREE.Texture {
+  const tex = loader.load(url)
   tex.magFilter = THREE.NearestFilter
   tex.minFilter = THREE.NearestFilter
+  tex.wrapS = THREE.RepeatWrapping
+  tex.wrapT = THREE.RepeatWrapping
   return tex
-}
-
-const BLOCK_COLORS: Record<number, [string, string]> = {
-  1: ['#a8a8a8', '#6e6e6e'], // 灰砖
-  2: ['#c0b090', '#7a6840'], // 垛口
-  3: ['#8b6060', '#5a3030'], // 烽火台
 }
 
 export default function BlockGrid() {
@@ -48,10 +22,11 @@ export default function BlockGrid() {
   const refs = useRef<Record<number, THREE.InstancedMesh | null>>({})
   const dummy = useMemo(() => new THREE.Object3D(), [])
 
-  const textures = useMemo(() =>
-    Object.fromEntries(
-      Object.entries(BLOCK_COLORS).map(([k, [c, a]]) => [k, makeBrickTexture(c, a)])
-    ), [])
+  const textures = useMemo(() => ({
+    1: loadPixelTexture('/textures/brick_gray.png'),
+    2: loadPixelTexture('/textures/merlon.png'),
+    3: loadPixelTexture('/textures/tower.png'),
+  }), [])
 
   const materials = useMemo(() =>
     Object.fromEntries(

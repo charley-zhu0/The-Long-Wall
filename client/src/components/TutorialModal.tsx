@@ -30,6 +30,11 @@ export default function TutorialModal({ onStart, isTouch = false }: Props) {
       icon: '🎥',
     },
     {
+      title: '修复破损的城墙',
+      desc: '城墙中间有一段已经损坏了！\n找到橙色虚影标记的位置，放置对应的砖块来修复它。\n全部修复后，你们就胜利了！🏆',
+      icon: '🧱',
+    },
+    {
       title: '和小伙伴一起建造！',
       desc: '蓝色虚影提示你需要放置砖块的位置，完成后会有庆祝！',
       icon: '🎉',
@@ -56,6 +61,11 @@ export default function TutorialModal({ onStart, isTouch = false }: Props) {
       title: '如何控制视角',
       desc: '用双指拖拽旋转和平移视角，双指捏合缩放。',
       icon: '✌️',
+    },
+    {
+      title: '修复破损的城墙',
+      desc: '城墙中间有一段已经损坏了！\n找到橙色虚影标记的位置，点击放置对应的砖块来修复它。\n全部修复后，你们就胜利了！🏆',
+      icon: '🧱',
     },
     {
       title: '和小伙伴一起建造！',
