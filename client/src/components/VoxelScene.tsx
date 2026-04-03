@@ -11,6 +11,7 @@ import MountainRange from './MountainRange'
 import ForestDecoration from './ForestDecoration'
 import EncourageOverlay from './EncourageOverlay'
 import CompletionModal from './CompletionModal'
+import TowerFire from './TowerFire'
 
 function Ground() {
   return (
@@ -58,7 +59,7 @@ export default function VoxelScene({
       {showCompletion && <CompletionModal onClose={() => setShowCompletion(false)} />}
       <Canvas
         shadows
-        camera={{ position: [30, 14, 24], fov: 60 }}
+        camera={{ position: [0, 28, 60], fov: 60 }}
         style={{ background: '#87ceeb' }}
         onContextMenu={(e) => e.preventDefault()}
       >
@@ -76,11 +77,14 @@ export default function VoxelScene({
         <Ground />
         <GridHelper />
         <BlockGrid />
+        {/* Tower beacons: cx=tower center X, cy=top of tower body (Y=7), cz=wall center Z=3.5 */}
+        <TowerFire cx={-20} cy={7} cz={3.5} />
+        <TowerFire cx={32}  cy={7} cz={3.5} />
         {inputEnabled && <InputController groupRoom={groupRoom ?? null} isTouch={isTouch} />}
         {isTouch ? (
           <OrbitControls
             mouseButtons={{ LEFT: undefined as any, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN }}
-            touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN }}
+            touches={{ ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE }}
             enablePan
             enableZoom
             maxPolarAngle={Math.PI / 2 - 0.05}

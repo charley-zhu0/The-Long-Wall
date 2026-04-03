@@ -2,20 +2,19 @@ import { useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { useFrame } from '@react-three/fiber'
 import { useBlockStore } from '../store/blockStore'
-import { makeMerlonGeometry, makeTowerGeometry } from '../utils/blockGeometries'
 
 interface Props {
   targetBlocks: Map<string, number> // key -> blockType
   highlightedPositions?: Set<string>
 }
 
+const ghostGeometry = new THREE.BoxGeometry(1.02, 1.02, 1.02)
+
 function BreathingGhost({
   position,
-  geometry,
   isHighlighted,
 }: {
   position: [number, number, number]
-  geometry: THREE.BufferGeometry
   isHighlighted: boolean
 }) {
   const matRef = useRef<THREE.MeshBasicMaterial>(null)
@@ -28,7 +27,7 @@ function BreathingGhost({
 
   return (
     <mesh position={position} raycast={() => null}>
-      <primitive object={geometry} />
+      <primitive object={ghostGeometry} />
       <meshBasicMaterial
         ref={matRef}
         color={isHighlighted ? '#ff4444' : '#ffcc44'}
@@ -43,18 +42,12 @@ function BreathingGhost({
 export default function BlueprintOverlay({ targetBlocks, highlightedPositions }: Props) {
   const blocks = useBlockStore((s) => s.blocks)
 
-  const ghostGeometries = useMemo(() => ({
-    1: new THREE.BoxGeometry(1.02, 1.02, 1.02),
-    2: makeMerlonGeometry(),
-    3: makeTowerGeometry(),
-  }), [])
-
   const missingPositions = useMemo(() => {
-    const missing: Array<[number, number, number, number]> = []
-    for (const [key, blockType] of targetBlocks) {
+    const missing: Array<[number, number, number]> = []
+    for (const [key] of targetBlocks) {
       if (!blocks.has(key)) {
         const [x, y, z] = key.split(',').map(Number)
-        missing.push([x, y, z, blockType])
+        missing.push([x, y, z])
       }
     }
     return missing
@@ -64,15 +57,13 @@ export default function BlueprintOverlay({ targetBlocks, highlightedPositions }:
 
   return (
     <>
-      {missingPositions.map(([x, y, z, blockType]) => {
+      {missingPositions.map(([x, y, z]) => {
         const key = `${x},${y},${z}`
         const isHighlighted = highlightedPositions?.has(key) ?? false
-        const geomType = (blockType === 2 || blockType === 3) ? blockType : 1
         return (
           <BreathingGhost
             key={key}
             position={[x, y, z]}
-            geometry={ghostGeometries[geomType]}
             isHighlighted={isHighlighted}
           />
         )

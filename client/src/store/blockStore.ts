@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type BlockType = 1 | 2 | 3 // 1=灰砖, 2=垛口, 3=烽火台
+export type BlockType = 1 | 2 | 3 // 1=普通城墙, 2=城门, 3=烽火台
 
 interface BlockEntry {
   type: BlockType
@@ -8,14 +8,12 @@ interface BlockEntry {
 
 interface BlockStoreState {
   blocks: Map<string, BlockEntry>
-  selectedType: BlockType
   history: Array<{ key: string; prev: BlockEntry | null }>
   touchMode: 'place' | 'erase'
   placeBlock: (x: number, y: number, z: number, type: BlockType) => void
   destroyBlock: (x: number, y: number, z: number) => void
   setBlocks: (entries: Map<string, { type: BlockType }>) => void
   undo: () => void
-  setSelectedType: (type: BlockType) => void
   setTouchMode: (mode: 'place' | 'erase') => void
 }
 
@@ -23,7 +21,6 @@ export const encodeKey = (x: number, y: number, z: number) => `${x},${y},${z}`
 
 export const useBlockStore = create<BlockStoreState>((set) => ({
   blocks: new Map(),
-  selectedType: 1,
   history: [],
   touchMode: 'place',
 
@@ -75,6 +72,5 @@ export const useBlockStore = create<BlockStoreState>((set) => ({
       return { blocks, history }
     }),
 
-  setSelectedType: (type) => set({ selectedType: type }),
   setTouchMode: (mode) => set({ touchMode: mode }),
 }))

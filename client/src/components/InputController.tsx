@@ -17,7 +17,6 @@ export default function InputController({
   const { camera, gl, scene } = useThree()
   const placeBlock = useBlockStore((s) => s.placeBlock)
   const destroyBlock = useBlockStore((s) => s.destroyBlock)
-  const selectedType = useBlockStore((s) => s.selectedType)
   const touchMode = useBlockStore((s) => s.touchMode)
 
   const getIntersection = useCallback(
@@ -52,10 +51,10 @@ export default function InputController({
       const x = Math.round(placePos.x)
       const y = Math.round(placePos.y)
       const z = Math.round(placePos.z)
-      placeBlock(x, y, z, selectedType)
-      groupRoom?.send('PLACE_BLOCK', { x, y, z, blockType: selectedType })
+      placeBlock(x, y, z, 1)
+      groupRoom?.send('PLACE_BLOCK', { x, y, z, blockType: 1 })
     },
-    [getIntersection, placeBlock, selectedType, groupRoom],
+    [getIntersection, placeBlock, groupRoom],
   )
 
   const handleDestroy = useCallback(
@@ -100,6 +99,9 @@ export default function InputController({
   useEffect(() => { touchModeRef.current = touchMode }, [touchMode])
 
   const handlePointerDown = useCallback((e: PointerEvent) => {
+    if (e.pointerType !== 'touch') return
+    // Ignore taps on HUD elements (buttons etc.)
+    if ((e.target as Element)?.closest('button, [data-hud]')) return
     tapStartX.current = e.clientX
     tapStartY.current = e.clientY
     tapPointerId.current = e.pointerId
@@ -108,17 +110,18 @@ export default function InputController({
 
   const handlePointerUp = useCallback(
     (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return
       if (e.pointerId !== tapPointerId.current) return
       const dx = e.clientX - tapStartX.current
       const dy = e.clientY - tapStartY.current
       const dist = Math.sqrt(dx * dx + dy * dy)
       const elapsed = Date.now() - tapStartTime.current
-      if (dist < 8 && elapsed < 300) {
-        // Single-finger tap
+      if (dist < 20 && elapsed < 400) {
+        // Single-finger tap — use start position for accurate raycasting
         if (touchModeRef.current === 'place') {
-          handlePlace(e.clientX, e.clientY)
+          handlePlace(tapStartX.current, tapStartY.current)
         } else {
-          handleDestroy(e.clientX, e.clientY)
+          handleDestroy(tapStartX.current, tapStartY.current)
         }
       }
     },
@@ -128,11 +131,12 @@ export default function InputController({
   useEffect(() => {
     const el = gl.domElement
     if (isTouch) {
-      el.addEventListener('pointerdown', handlePointerDown)
-      el.addEventListener('pointerup', handlePointerUp)
+      // Listen on document to survive OrbitControls' setPointerCapture
+      document.addEventListener('pointerdown', handlePointerDown)
+      document.addEventListener('pointerup', handlePointerUp)
       return () => {
-        el.removeEventListener('pointerdown', handlePointerDown)
-        el.removeEventListener('pointerup', handlePointerUp)
+        document.removeEventListener('pointerdown', handlePointerDown)
+        document.removeEventListener('pointerup', handlePointerUp)
       }
     } else {
       el.addEventListener('mousedown', handleMouseDown)

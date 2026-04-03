@@ -36,6 +36,7 @@ export class GroupRoom extends Room<GroupRoomState> {
 
     this.onMessage('DESTROY_BLOCK', (client, msg: DestroyMsg) => {
       const key = `${msg.x},${msg.y},${msg.z}`
+      if (this.fixedBlocks.has(key)) return
       this.state.blocks.delete(key)
       this.runFloatingCheck()
     })

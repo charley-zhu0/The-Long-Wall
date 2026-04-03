@@ -1,45 +1,12 @@
 import React from 'react'
 import { useBlockStore } from '../store/blockStore'
 
-const BLOCK_LABELS: Record<number, string> = {
-  1: '灰砖',
-  2: '垛口',
-  3: '烽火台',
-}
-
 export default function HUD({ isTouch = false }: { isTouch?: boolean }) {
   const blocks = useBlockStore((s) => s.blocks)
   const undo = useBlockStore((s) => s.undo)
   const history = useBlockStore((s) => s.history)
-  const selectedType = useBlockStore((s) => s.selectedType)
-  const setSelectedType = useBlockStore((s) => s.setSelectedType)
   const touchMode = useBlockStore((s) => s.touchMode)
   const setTouchMode = useBlockStore((s) => s.setTouchMode)
-
-  const blockTypeSelector = (
-    <div style={{ display: 'flex', gap: 8 }}>
-      {([1, 2, 3] as const).map((type) => (
-        <button
-          key={type}
-          onClick={() => setSelectedType(type)}
-          style={{
-            padding: isTouch ? '12px 20px' : '8px 16px',
-            fontSize: isTouch ? 18 : 16,
-            borderRadius: 8,
-            border: selectedType === type ? '3px solid #f1c40f' : '3px solid transparent',
-            background: selectedType === type ? '#2980b9' : '#555',
-            color: '#fff',
-            cursor: 'pointer',
-            fontWeight: 'bold',
-            minWidth: isTouch ? 48 : undefined,
-            minHeight: isTouch ? 48 : undefined,
-          }}
-        >
-          {BLOCK_LABELS[type]}
-        </button>
-      ))}
-    </div>
-  )
 
   return (
     <div style={{
@@ -81,9 +48,6 @@ export default function HUD({ isTouch = false }: { isTouch?: boolean }) {
         >
           ↩ 撤销
         </button>
-
-        {/* Block type selector — top bar for PC only */}
-        {!isTouch && <div style={{ marginLeft: 'auto' }}>{blockTypeSelector}</div>}
       </div>
 
       {/* Crosshair — PC only */}
@@ -99,7 +63,7 @@ export default function HUD({ isTouch = false }: { isTouch?: boolean }) {
         }}>+</div>
       )}
 
-      {/* Bottom bar — touch only: block type selector + place/erase toggle */}
+      {/* Bottom bar — touch only: place/erase toggle */}
       {isTouch && (
         <div style={{
           position: 'fixed',
@@ -111,8 +75,6 @@ export default function HUD({ isTouch = false }: { isTouch?: boolean }) {
           gap: 12,
           pointerEvents: 'auto',
         }}>
-          {blockTypeSelector}
-          <div style={{ width: 1, height: 48, background: 'rgba(255,255,255,0.3)', margin: '0 4px' }} />
           <button
             onClick={() => setTouchMode('place')}
             style={{
