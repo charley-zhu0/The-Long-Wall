@@ -1,6 +1,25 @@
 import { Client, Room } from 'colyseus.js'
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? 'ws://localhost:2567'
+// 自动适配协议和域名：
+//   开发环境 (localhost)     → ws://localhost:2567       (直连，不走 nginx)
+//   生产环境 (https访问)     → wss://your-ip/colyseus    (走 nginx wss 代理)
+//   生产环境 (http访问)      → ws://your-ip/colyseus
+function resolveServerUrl(): string {
+  if (import.meta.env.VITE_SERVER_URL) {
+    return import.meta.env.VITE_SERVER_URL as string
+  }
+  const { protocol, hostname, port } = window.location
+  // 本地开发直连游戏服务器
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return `ws://${hostname}:2567`
+  }
+  // 生产：通过 nginx /colyseus 代理转发，协议跟随页面
+  const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:'
+  const portSuffix = (port && port !== '443' && port !== '80') ? `:${port}` : ''
+  return `${wsProtocol}//${hostname}${portSuffix}/colyseus`
+}
+
+const SERVER_URL = resolveServerUrl()
 
 let colyseusClient: Client | null = null
 
