@@ -92,51 +92,83 @@ export default function InputController({
   // Touch tap handler refs
   const tapStartX = useRef(0)
   const tapStartY = useRef(0)
-  const tapPointerId = useRef<number | null>(null)
+  const tapIdentifier = useRef<number | null>(null)
   const tapStartTime = useRef(0)
   // Keep latest touchMode in a ref so the event handler always sees the current value
   const touchModeRef = useRef(touchMode)
   useEffect(() => { touchModeRef.current = touchMode }, [touchMode])
 
-  const handlePointerDown = useCallback((e: PointerEvent) => {
-    if (e.pointerType !== 'touch') return
+  // Keep latest handlers in refs so touchstart/touchend closures always see current versions
+  const handlePlaceRef = useRef(handlePlace)
+  const handleDestroyRef = useRef(handleDestroy)
+  useEffect(() => { handlePlaceRef.current = handlePlace }, [handlePlace])
+  useEffect(() => { handleDestroyRef.current = handleDestroy }, [handleDestroy])
+
+  const handleTouchStart = useCallback((e: TouchEvent) => {
     // Ignore taps on HUD elements (buttons etc.)
     if ((e.target as Element)?.closest('button, [data-hud]')) return
-    tapStartX.current = e.clientX
-    tapStartY.current = e.clientY
-    tapPointerId.current = e.pointerId
+    // Only track the first finger; ignore multi-touch (pinch/zoom gestures)
+    if (e.touches.length !== 1) {
+      tapIdentifier.current = null
+      return
+    }
+    const touch = e.changedTouches[0]
+    tapStartX.current = touch.clientX
+    tapStartY.current = touch.clientY
+    tapIdentifier.current = touch.identifier
     tapStartTime.current = Date.now()
+    // Prevent OrbitControls from capturing this single-finger touch so that
+    // a quick tap is not treated as a pan gesture and the coordinates stay
+    // accurate when we raycast on touchend.
+    e.stopPropagation()
   }, [])
 
-  const handlePointerUp = useCallback(
-    (e: PointerEvent) => {
-      if (e.pointerType !== 'touch') return
-      if (e.pointerId !== tapPointerId.current) return
-      const dx = e.clientX - tapStartX.current
-      const dy = e.clientY - tapStartY.current
-      const dist = Math.sqrt(dx * dx + dy * dy)
-      const elapsed = Date.now() - tapStartTime.current
-      if (dist < 20 && elapsed < 400) {
-        // Single-finger tap — use start position for accurate raycasting
-        if (touchModeRef.current === 'place') {
-          handlePlace(tapStartX.current, tapStartY.current)
-        } else {
-          handleDestroy(tapStartX.current, tapStartY.current)
-        }
+  const handleTouchEnd = useCallback((e: TouchEvent) => {
+    if (tapIdentifier.current === null) return
+    // Find the touch that matches our tracked identifier
+    let endTouch: Touch | null = null
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === tapIdentifier.current) {
+        endTouch = e.changedTouches[i]
+        break
       }
-    },
-    [handlePlace, handleDestroy],
-  )
+    }
+    if (!endTouch) return
+    tapIdentifier.current = null
+
+    const dx = endTouch.clientX - tapStartX.current
+    const dy = endTouch.clientY - tapStartY.current
+    const dist = Math.sqrt(dx * dx + dy * dy)
+    const elapsed = Date.now() - tapStartTime.current
+
+    // Tap: short duration, minimal movement; use start coords for accurate raycasting
+    if (dist < 30 && elapsed < 600) {
+      e.preventDefault()
+      if (touchModeRef.current === 'place') {
+        handlePlaceRef.current(tapStartX.current, tapStartY.current)
+      } else {
+        handleDestroyRef.current(tapStartX.current, tapStartY.current)
+      }
+    }
+  }, [])
+
+  const handleTouchCancel = useCallback(() => {
+    tapIdentifier.current = null
+  }, [])
 
   useEffect(() => {
     const el = gl.domElement
     if (isTouch) {
-      // Listen on document to survive OrbitControls' setPointerCapture
-      document.addEventListener('pointerdown', handlePointerDown)
-      document.addEventListener('pointerup', handlePointerUp)
+      // Use native touch events (capture phase) so we intercept before OrbitControls
+      // which uses pointer events. This prevents OrbitControls from treating a quick
+      // tap as a pan, which would shift coordinates and break raycasting.
+      el.addEventListener('touchstart', handleTouchStart, { capture: true, passive: false })
+      el.addEventListener('touchend', handleTouchEnd, { capture: true, passive: false })
+      el.addEventListener('touchcancel', handleTouchCancel, { capture: true })
       return () => {
-        document.removeEventListener('pointerdown', handlePointerDown)
-        document.removeEventListener('pointerup', handlePointerUp)
+        el.removeEventListener('touchstart', handleTouchStart, { capture: true })
+        el.removeEventListener('touchend', handleTouchEnd, { capture: true })
+        el.removeEventListener('touchcancel', handleTouchCancel, { capture: true })
       }
     } else {
       el.addEventListener('mousedown', handleMouseDown)
@@ -147,7 +179,7 @@ export default function InputController({
         el.removeEventListener('contextmenu', preventContext)
       }
     }
-  }, [gl.domElement, isTouch, handleMouseDown, handlePointerDown, handlePointerUp])
+  }, [gl.domElement, isTouch, handleMouseDown, handleTouchStart, handleTouchEnd, handleTouchCancel])
 
   return null
 }
