@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Sky } from '@react-three/drei'
 import * as THREE from 'three'
@@ -14,6 +14,17 @@ import CompletionModal from './CompletionModal'
 import TowerFire from './TowerFire'
 
 function Ground() {
+  const grassTexture = useMemo(() => {
+    const loader = new THREE.TextureLoader()
+    const tex = loader.load('/textures/grass.png')
+    tex.wrapS = THREE.RepeatWrapping
+    tex.wrapT = THREE.RepeatWrapping
+    tex.repeat.set(40, 40)
+    tex.magFilter = THREE.LinearFilter
+    tex.minFilter = THREE.LinearMipmapLinearFilter
+    return tex
+  }, [])
+
   return (
     <mesh
       rotation={[-Math.PI / 2, 0, 0]}
@@ -23,7 +34,7 @@ function Ground() {
       isGroundPlane
     >
       <planeGeometry args={[200, 200]} />
-      <meshLambertMaterial color="#6daa4a" />
+      <meshLambertMaterial map={grassTexture} />
     </mesh>
   )
 }
@@ -60,7 +71,7 @@ export default function VoxelScene({
       <Canvas
         shadows
         camera={{ position: [0, 28, 60], fov: 60 }}
-        style={{ background: '#87ceeb' }}
+        style={{ background: '#4a9edd' }}
         onContextMenu={(e) => e.preventDefault()}
       >
         <ambientLight intensity={0.6} />
@@ -70,7 +81,7 @@ export default function VoxelScene({
           intensity={1.2}
           shadow-mapSize={[2048, 2048]}
         />
-        <Sky sunPosition={[100, 30, -100]} turbidity={8} rayleigh={0.5} mieCoefficient={0.005} mieDirectionalG={0.8} />
+        <Sky sunPosition={[100, 40, -100]} turbidity={2} rayleigh={3} mieCoefficient={0.003} mieDirectionalG={0.85} />
         <SunGlow />
         <MountainRange />
         <ForestDecoration />
