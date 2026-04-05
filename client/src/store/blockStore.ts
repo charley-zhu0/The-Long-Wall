@@ -4,6 +4,7 @@ export type BlockType = 1 | 2 | 3 // 1=普通城墙, 2=城门, 3=烽火台
 
 interface BlockEntry {
   type: BlockType
+  fixed?: boolean
 }
 
 interface BlockStoreState {
@@ -12,7 +13,7 @@ interface BlockStoreState {
   touchMode: 'place' | 'erase'
   placeBlock: (x: number, y: number, z: number, type: BlockType) => void
   destroyBlock: (x: number, y: number, z: number) => void
-  setBlocks: (entries: Map<string, { type: BlockType }>) => void
+  setBlocks: (entries: Map<string, { type: BlockType; fixed?: boolean }>) => void
   undo: () => void
   setTouchMode: (mode: 'place' | 'erase') => void
 }
@@ -41,6 +42,8 @@ export const useBlockStore = create<BlockStoreState>((set) => ({
       const key = encodeKey(x, y, z)
       if (!state.blocks.has(key)) return state
       const prev = state.blocks.get(key)!
+      // Do not destroy fixed (initial wall) blocks on the client
+      if (prev.fixed) return state
       const blocks = new Map(state.blocks)
       blocks.delete(key)
       return {
@@ -53,7 +56,7 @@ export const useBlockStore = create<BlockStoreState>((set) => ({
     set(() => {
       const blocks = new Map<string, BlockEntry>()
       for (const [key, val] of entries) {
-        blocks.set(key, { type: val.type })
+        blocks.set(key, { type: val.type, fixed: val.fixed ?? false })
       }
       return { blocks, history: [] }
     }),

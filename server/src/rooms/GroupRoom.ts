@@ -91,16 +91,17 @@ export class GroupRoom extends Room<GroupRoomState> {
         this.fixedBlocks.add(key)
         const block = new BlockState()
         block.blockType = b.type
+        block.fixed = true
         this.state.blocks.set(key, block)
       } else {
         repairBlocks.push(b)
       }
     }
 
-    // Repair section: randomly keep 70% (remove 30%)
+    // Repair section: remove exactly 1 block for testing (was 30%)
     const indices = repairBlocks.map((_, i) => i)
     const toRemove = new Set(
-      indices.sort(() => Math.random() - 0.5).slice(0, Math.floor(repairBlocks.length * 0.3))
+      indices.sort(() => Math.random() - 0.5).slice(0, 1)
     )
     for (let i = 0; i < repairBlocks.length; i++) {
       if (!toRemove.has(i)) {

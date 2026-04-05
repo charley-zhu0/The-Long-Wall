@@ -40,9 +40,9 @@ export default function App() {
         const room = await joinGroupById(roomId)
         // Sync initial state immediately
         const syncBlocks = (state: any) => {
-          const entries = new Map<string, { type: BlockType }>()
+          const entries = new Map<string, { type: BlockType; fixed?: boolean }>()
           state.blocks.forEach((block: any, key: string) => {
-            entries.set(key, { type: block.blockType as BlockType })
+            entries.set(key, { type: block.blockType as BlockType, fixed: block.fixed ?? false })
           })
           setBlocks(entries)
         }
@@ -71,9 +71,9 @@ export default function App() {
       // Game already started — join immediately
       joinGroupById(roomId).then((room) => {
         const syncBlocks = (state: any) => {
-          const entries = new Map<string, { type: BlockType }>()
+          const entries = new Map<string, { type: BlockType; fixed?: boolean }>()
           state.blocks.forEach((block: any, key: string) => {
-            entries.set(key, { type: block.blockType as BlockType })
+            entries.set(key, { type: block.blockType as BlockType, fixed: block.fixed ?? false })
           })
           setBlocks(entries)
         }

@@ -9,9 +9,9 @@ function lcg(seed: number) {
   }
 }
 
-// Wall occupies x: -45..44, z: 0..7 (with 1-unit buffer)
+// Wall occupies x: -45..44, z: 0..7 (with 10-unit clearance buffer)
 function isInsideWall(x: number, z: number, halfW: number): boolean {
-  return x >= -46 - halfW && x <= 45 + halfW && z >= -1 - halfW && z <= 8 + halfW
+  return x >= -46 - halfW && x <= 45 + halfW && z >= -10 - halfW && z <= 17 + halfW
 }
 
 function generateTrees() {
@@ -19,11 +19,11 @@ function generateTrees() {
   const trees: { x: number; z: number; scale: number; variety: number }[] = []
   let attempts = 0
 
-  // Front forest: z = -2 to -30 (in front of wall)
+  // Front forest: z = -10 to -40 (at least 10 units in front of wall)
   while (trees.length < 40 && attempts < 600) {
     attempts++
     const x = (rand() - 0.5) * 140   // -70 to 70
-    const z = rand() * -28 - 2        // -2 to -30
+    const z = rand() * -30 - 10       // -10 to -40
     const scale = 0.7 + rand() * 0.8  // 0.7 – 1.5
     const variety = Math.floor(rand() * 3) // 0, 1, 2
     const halfW = scale * 1.5
@@ -37,12 +37,12 @@ function generateTrees() {
     }
   }
 
-  // Back forest: z = 8 to 40 (behind wall)
+  // Back forest: z = 18 to 50 (at least 10 units behind wall, wall ends at z=7)
   attempts = 0
   while (trees.length < 70 && attempts < 600) {
     attempts++
     const x = (rand() - 0.5) * 140
-    const z = rand() * 32 + 9         // 9 to 41
+    const z = rand() * 32 + 18        // 18 to 50
     const scale = 0.7 + rand() * 0.8
     const variety = Math.floor(rand() * 3)
     const halfW = scale * 1.5

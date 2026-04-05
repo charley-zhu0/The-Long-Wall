@@ -1,7 +1,8 @@
 import { Schema, MapSchema, type } from '@colyseus/schema'
 
 export class BlockState extends Schema {
-  @type('uint8') blockType: number = 0
+  @type('uint8')   blockType: number = 0
+  @type('boolean') fixed: boolean = false
 }
 
 export class PlayerState extends Schema {
