@@ -11,11 +11,13 @@ interface BlockStoreState {
   blocks: Map<string, BlockEntry>
   history: Array<{ key: string; prev: BlockEntry | null }>
   touchMode: 'place' | 'erase'
+  destroyBlockedTip: boolean
   placeBlock: (x: number, y: number, z: number, type: BlockType) => void
-  destroyBlock: (x: number, y: number, z: number) => void
+  destroyBlock: (x: number, y: number, z: number) => { blocked: boolean }
   setBlocks: (entries: Map<string, { type: BlockType; fixed?: boolean }>) => void
   undo: () => void
   setTouchMode: (mode: 'place' | 'erase') => void
+  clearDestroyBlockedTip: () => void
 }
 
 export const encodeKey = (x: number, y: number, z: number) => `${x},${y},${z}`
@@ -24,6 +26,7 @@ export const useBlockStore = create<BlockStoreState>((set) => ({
   blocks: new Map(),
   history: [],
   touchMode: 'place',
+  destroyBlockedTip: false,
 
   placeBlock: (x, y, z, type) =>
     set((state) => {
@@ -37,20 +40,26 @@ export const useBlockStore = create<BlockStoreState>((set) => ({
       }
     }),
 
-  destroyBlock: (x, y, z) =>
+  destroyBlock: (x, y, z) => {
+    let blocked = false
     set((state) => {
       const key = encodeKey(x, y, z)
       if (!state.blocks.has(key)) return state
       const prev = state.blocks.get(key)!
       // Do not destroy fixed (initial wall) blocks on the client
-      if (prev.fixed) return state
+      if (prev.fixed) {
+        blocked = true
+        return { ...state, destroyBlockedTip: true }
+      }
       const blocks = new Map(state.blocks)
       blocks.delete(key)
       return {
         blocks,
         history: [...state.history, { key, prev }],
       }
-    }),
+    })
+    return { blocked }
+  },
 
   setBlocks: (entries) =>
     set(() => {
@@ -76,4 +85,6 @@ export const useBlockStore = create<BlockStoreState>((set) => ({
     }),
 
   setTouchMode: (mode) => set({ touchMode: mode }),
+
+  clearDestroyBlockedTip: () => set({ destroyBlockedTip: false }),
 }))

@@ -15,6 +15,7 @@ export class GroupRoom extends Room<GroupRoomState> {
   private groupId: number = 1
   private targetBlocks: Set<string> = new Set()
   private fixedBlocks: Set<string> = new Set()
+  private completionBroadcast = false
 
   onCreate(options: { groupId?: number; blueprint?: Array<{ x: number; y: number; z: number; type: number; fixed?: boolean }> }) {
     this.groupId = options.groupId ?? 1
@@ -86,41 +87,44 @@ export class GroupRoom extends Room<GroupRoomState> {
     for (const b of blocks) {
       const key = `${b.x},${b.y},${b.z}`
       this.targetBlocks.add(key)
+      this.fixedBlocks.add(key) // all blueprint blocks are fixed (undeletable)
       if (b.fixed) {
-        // Fixed section: place directly, never removed
-        this.fixedBlocks.add(key)
+        // Structural section: place directly, mark fixed
         const block = new BlockState()
         block.blockType = b.type
         block.fixed = true
         this.state.blocks.set(key, block)
       } else {
+        // Repair section: needs to be placed by players
         repairBlocks.push(b)
       }
     }
 
-    // Repair section: remove exactly 1 block for testing (was 30%)
+    // Repair section: remove 20 blocks for players to fix, pre-place the rest
     const indices = repairBlocks.map((_, i) => i)
     const toRemove = new Set(
-      indices.sort(() => Math.random() - 0.5).slice(0, 1)
+      indices.sort(() => Math.random() - 0.5).slice(0, 20)
     )
     for (let i = 0; i < repairBlocks.length; i++) {
+      const b = repairBlocks[i]
+      const block = new BlockState()
+      block.blockType = b.type
+      block.fixed = true // mark as fixed so client also protects it
       if (!toRemove.has(i)) {
-        const b = repairBlocks[i]
-        const block = new BlockState()
-        block.blockType = b.type
         this.state.blocks.set(`${b.x},${b.y},${b.z}`, block)
       }
     }
   }
 
   private checkCompletion() {
+    if (this.completionBroadcast) return
     if (this.targetBlocks.size === 0) return
-    // Only check repair section (non-fixed blocks)
-    const repairTargets = [...this.targetBlocks].filter(k => !this.fixedBlocks.has(k))
-    if (repairTargets.length === 0) return
-    for (const key of repairTargets) {
+    // Repair targets: blueprint blocks that were initially removed (not in state at game start)
+    // Since all blueprint blocks are now fixed, check all targetBlocks are present in state
+    for (const key of this.targetBlocks) {
       if (!this.state.blocks.has(key)) return
     }
+    this.completionBroadcast = true
     this.broadcast('SECTION_COMPLETE', { groupId: this.groupId })
   }
 

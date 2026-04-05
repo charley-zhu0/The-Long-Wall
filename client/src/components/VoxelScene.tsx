@@ -57,10 +57,15 @@ export default function VoxelScene({
   isTouch?: boolean
 }) {
   const [showCompletion, setShowCompletion] = useState(false)
+  const completionShown = React.useRef(false)
 
   useEffect(() => {
     if (!groupRoom) return
-    groupRoom.onMessage('SECTION_COMPLETE', () => setShowCompletion(true))
+    groupRoom.onMessage('SECTION_COMPLETE', () => {
+      if (completionShown.current) return
+      completionShown.current = true
+      setShowCompletion(true)
+    })
   }, [groupRoom])
 
   return (

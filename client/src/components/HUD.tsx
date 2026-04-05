@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useBlockStore } from '../store/blockStore'
 
 export default function HUD({ isTouch = false }: { isTouch?: boolean }) {
@@ -7,6 +7,14 @@ export default function HUD({ isTouch = false }: { isTouch?: boolean }) {
   const history = useBlockStore((s) => s.history)
   const touchMode = useBlockStore((s) => s.touchMode)
   const setTouchMode = useBlockStore((s) => s.setTouchMode)
+  const destroyBlockedTip = useBlockStore((s) => s.destroyBlockedTip)
+  const clearDestroyBlockedTip = useBlockStore((s) => s.clearDestroyBlockedTip)
+
+  useEffect(() => {
+    if (!destroyBlockedTip) return
+    const t = setTimeout(clearDestroyBlockedTip, 2000)
+    return () => clearTimeout(t)
+  }, [destroyBlockedTip, clearDestroyBlockedTip])
 
   return (
     <div style={{
@@ -49,6 +57,27 @@ export default function HUD({ isTouch = false }: { isTouch?: boolean }) {
           ↩ 撤销
         </button>
       </div>
+
+      {/* Destroy-blocked tip */}
+      {destroyBlockedTip && (
+        <div style={{
+          position: 'fixed',
+          top: 80,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(180,30,30,0.88)',
+          color: '#fff',
+          padding: '10px 24px',
+          borderRadius: 10,
+          fontSize: 17,
+          fontWeight: 'bold',
+          pointerEvents: 'none',
+          whiteSpace: 'nowrap',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.4)',
+        }}>
+          🚫 预设的长城砖块禁止拆除
+        </div>
+      )}
 
       {/* Crosshair — PC only */}
       {!isTouch && (
