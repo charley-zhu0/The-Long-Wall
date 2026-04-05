@@ -1,7 +1,7 @@
 import { Room, Client } from 'colyseus'
 import { GroupRoomState, BlockState, PlayerState } from '../schema'
 
-const GRID = { minX: -32, maxX: 32, minY: 0, maxY: 32, minZ: -32, maxZ: 32 }
+const GRID = { minX: -45, maxX: 44, minY: 0, maxY: 32, minZ: -32, maxZ: 32 }
 const AVATAR_COLORS = ['#FF6B6B', '#FF9F43', '#FFD93D', '#6BCB77', '#4ECDC4', '#4D96FF', '#9B59B6', '#FF6FB7']
 
 type PlaceMsg   = { type: 'PLACE_BLOCK';   x: number; y: number; z: number; blockType: number }
