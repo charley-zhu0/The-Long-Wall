@@ -26,6 +26,7 @@ function BlockLayer({ blockType }: { blockType: number }) {
       2: '/textures/brick_merlon.png',
       3: '/textures/brick_tower.png',
       4: '/textures/brick_window.png',
+      5: '/textures/brick_door.png',
     }
     const url = urls[blockType] ?? urls[1]
     return new THREE.MeshLambertMaterial({ map: loadPixelTexture(url) })
@@ -81,6 +82,7 @@ export default function BlockGrid() {
       <BlockLayer blockType={2} />
       <BlockLayer blockType={3} />
       <BlockLayer blockType={4} />
+      <BlockLayer blockType={5} />
     </>
   )
 }

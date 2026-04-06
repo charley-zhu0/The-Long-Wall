@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Room } from 'colyseus.js'
 import VoxelScene from './components/VoxelScene'
 import TeacherHUD from './components/TeacherHUD'
-import TutorialModal from './components/TutorialModal'
 import CharacterCreator from './components/CharacterCreator'
 import GroupSelector from './components/GroupSelector'
 import { joinGroupById } from './network/client'
@@ -10,7 +9,7 @@ import { useBlockStore } from './store/blockStore'
 import type { BlockType } from './store/blockStore'
 import { isTouchDevice } from './utils/deviceDetect'
 
-type AppPhase = 'character' | 'group' | 'waiting' | 'tutorial' | 'game'
+type AppPhase = 'character' | 'group' | 'waiting' | 'game'
 
 const isTeacher = window.location.pathname === '/teacher'
 
@@ -52,7 +51,7 @@ export default function App() {
           setEncourageMessage(msg.message)
         })
         setGroupRoom(room)
-        setPhase('tutorial')
+        setPhase('game')
       } catch (err) {
         console.error('Failed to join GroupRoom', err)
       }
@@ -83,7 +82,7 @@ export default function App() {
           setEncourageMessage(msg.message)
         })
         setGroupRoom(room)
-        setPhase('tutorial')
+        setPhase('game')
       }).catch((err) => console.error('Failed to join GroupRoom', err))
     } else {
       // Game not started yet — show waiting screen, listen for GAME_STARTED
@@ -126,7 +125,6 @@ export default function App() {
 
   return (
     <>
-      {phase === 'tutorial' && <TutorialModal isTouch={isTouch} onStart={() => setPhase('game')} />}
       <VoxelScene
         inputEnabled={phase === 'game'}
         groupRoom={groupRoom}

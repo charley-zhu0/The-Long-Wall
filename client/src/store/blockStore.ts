@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type BlockType = 1 | 2 | 3 | 4 // 1=普通城墙, 2=垛口, 3=烽火台, 4=窗户
+export type BlockType = 1 | 2 | 3 | 4 | 5 // 1=普通城墙, 2=垛口, 3=烽火台, 4=窗户, 5=门洞
 
 interface BlockEntry {
   type: BlockType

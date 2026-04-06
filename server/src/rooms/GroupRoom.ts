@@ -100,10 +100,10 @@ export class GroupRoom extends Room<GroupRoomState> {
       }
     }
 
-    // Repair section: remove 20 blocks for players to fix, pre-place the rest
+    // Repair section: remove 60 blocks for players to fix, pre-place the rest
     const indices = repairBlocks.map((_, i) => i)
     const toRemove = new Set(
-      indices.sort(() => Math.random() - 0.5).slice(0, 20)
+      indices.sort(() => Math.random() - 0.5).slice(0, 60)
     )
     for (let i = 0; i < repairBlocks.length; i++) {
       const b = repairBlocks[i]
