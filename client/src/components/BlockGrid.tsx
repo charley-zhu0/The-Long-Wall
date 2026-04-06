@@ -15,14 +15,22 @@ function loadPixelTexture(url: string): THREE.Texture {
   return tex
 }
 
-export default function BlockGrid() {
+function BlockLayer({ blockType }: { blockType: number }) {
   const blocks = useBlockStore((s) => s.blocks)
 
   const geometry = useMemo(() => new THREE.BoxGeometry(1, 1, 1), [])
-  const material = useMemo(
-    () => new THREE.MeshLambertMaterial({ map: loadPixelTexture('/textures/brick_gray.png') }),
-    []
-  )
+
+  const material = useMemo(() => {
+    const urls: Record<number, string> = {
+      1: '/textures/brick_gray.png',
+      2: '/textures/brick_merlon.png',
+      3: '/textures/brick_tower.png',
+      4: '/textures/brick_window.png',
+    }
+    const url = urls[blockType] ?? urls[1]
+    return new THREE.MeshLambertMaterial({ map: loadPixelTexture(url) })
+  }, [blockType])
+
   const ref = useRef<THREE.InstancedMesh | null>(null)
   const dummy = useMemo(() => new THREE.Object3D(), [])
 
@@ -32,12 +40,14 @@ export default function BlockGrid() {
 
   const positions = useMemo(() => {
     const result: Array<[number, number, number]> = []
-    for (const [key] of blocks) {
-      const [x, y, z] = key.split(',').map(Number)
-      result.push([x, y, z])
+    for (const [key, entry] of blocks) {
+      if ((entry.type ?? 1) === blockType) {
+        const [x, y, z] = key.split(',').map(Number)
+        result.push([x, y, z])
+      }
     }
     return result
-  }, [blocks])
+  }, [blocks, blockType])
 
   useEffect(() => {
     const mesh = ref.current
@@ -51,6 +61,8 @@ export default function BlockGrid() {
     mesh.instanceMatrix.needsUpdate = true
   }, [positions, dummy])
 
+  if (positions.length === 0) return null
+
   return (
     <instancedMesh
       ref={ref}
@@ -59,5 +71,16 @@ export default function BlockGrid() {
       castShadow
       receiveShadow
     />
+  )
+}
+
+export default function BlockGrid() {
+  return (
+    <>
+      <BlockLayer blockType={1} />
+      <BlockLayer blockType={2} />
+      <BlockLayer blockType={3} />
+      <BlockLayer blockType={4} />
+    </>
   )
 }
